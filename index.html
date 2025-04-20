@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>ID Card Print Tool</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: #f0f0f0;
+      margin: 0;
+      padding: 20px;
+    }
+    .container {
+      max-width: 900px;
+      margin: auto;
+      background: #fff;
+      border-radius: 8px;
+      box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+      padding: 20px;
+    }
+    .controls {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+    .controls input[type="file"],
+    .controls select,
+    .controls button {
+      padding: 10px;
+      font-size: 16px;
+      border-radius: 5px;
+      border: 1px solid #ccc;
+    }
+    .controls button {
+      background-color: #007bff;
+      color: white;
+      cursor: pointer;
+      border: none;
+      transition: background-color 0.3s ease;
+    }
+    .controls button:hover {
+      background-color: #0056b3;
+    }
+    .drop-area {
+      border: 2px dashed #007bff;
+      padding: 20px;
+      text-align: center;
+      border-radius: 10px;
+      color: #666;
+      cursor: pointer;
+    }
+    .drop-area.dragover {
+      background-color: #e0e0ff;
+      border-color: #0056b3;
+    }
+    .status {
+      font-size: 14px;
+      color: green;
+    }
+    .a4-page {
+      width: 210mm;
+      height: 297mm;
+      margin: auto;
+      background: white;
+      padding: 1.5cm;
+      box-sizing: border-box;
+    }
+    .id-row {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 10mm;
+    }
+    .id-image {
+      width: 3.4in;
+      height: 2.3in;
+      border: 1px solid #aaa;
+      object-fit: cover;
+    }
+    @media print {
+      body * {
+        visibility: hidden;
+      }
+      .a4-page, .a4-page * {
+        visibility: visible;
+      }
+      .a4-page {
+        position: absolute;
+        top: 0;
+        left: 0;
+      }
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <div class="controls">
+    <div class="drop-area" id="dropFront">Drag & drop front image or click to upload</div>
+    <input type="file" accept="image/*" id="frontPicker" style="display:none;">
+    <div class="status" id="statusFront"></div>
+
+    <div class="drop-area" id="dropBack">Drag & drop back image or click to upload</div>
+    <input type="file" accept="image/*" id="backPicker" style="display:none;">
+    <div class="status" id="statusBack"></div>
+
+    <label for="copyCount">Select number of copies (1–8):</label>
+    <select id="copyCount">
+      <option value="1">1 Copy</option>
+      <option value="2">2 Copies</option>
+      <option value="3">3 Copies</option>
+      <option value="4">4 Copies</option>
+    </select>
+
+    <button onclick="generateLayout()">Generate Layout</button>
+    <button onclick="window.print()">Print</button>
+  </div>
+</div>
+
+<div class="a4-page" id="printArea"></div>
+
+<script>
+  let frontImage = '';
+  let backImage = '';
+
+  const frontPicker = document.getElementById('frontPicker');
+  const backPicker = document.getElementById('backPicker');
+  const statusFront = document.getElementById('statusFront');
+  const statusBack = document.getElementById('statusBack');
+
+  document.getElementById('dropFront').addEventListener('click', () => frontPicker.click());
+  document.getElementById('dropBack').addEventListener('click', () => backPicker.click());
+
+  frontPicker.addEventListener('change', e => readFile(e.target.files[0], 'front'));
+  backPicker.addEventListener('change', e => readFile(e.target.files[0], 'back'));
+
+  function handleDrop(event, type) {
+    event.preventDefault();
+    const file = event.dataTransfer.files[0];
+    readFile(file, type);
+  }
+
+  function readFile(file, type) {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      if (type === 'front') {
+        frontImage = e.target.result;
+        statusFront.textContent = 'Front image uploaded ✔';
+      } else {
+        backImage = e.target.result;
+        statusBack.textContent = 'Back image uploaded ✔';
+      }
+    };
+    reader.readAsDataURL(file);
+  }
+
+  ['dropFront', 'dropBack'].forEach(id => {
+    const dropArea = document.getElementById(id);
+    const type = id.includes('Front') ? 'front' : 'back';
+    dropArea.addEventListener('dragover', e => {
+      e.preventDefault();
+      dropArea.classList.add('dragover');
+    });
+    dropArea.addEventListener('dragleave', () => dropArea.classList.remove('dragover'));
+    dropArea.addEventListener('drop', e => {
+      dropArea.classList.remove('dragover');
+      handleDrop(e, type);
+    });
+  });
+
+  function generateLayout() {
+    const printArea = document.getElementById('printArea');
+    printArea.innerHTML = '';
+    const copies = parseInt(document.getElementById('copyCount').value);
+
+    if (!frontImage || !backImage) {
+      alert('Please upload both front and back images.');
+      return;
+    }
+
+    for (let i = 0; i < copies; i++) {
+      const row = document.createElement('div');
+      row.className = 'id-row';
+
+      const front = document.createElement('img');
+      front.className = 'id-image';
+      front.src = frontImage;
+
+      const back = document.createElement('img');
+      back.className = 'id-image';
+      back.src = backImage;
+
+      row.appendChild(front);
+      row.appendChild(back);
+      printArea.appendChild(row);
+    }
+  }
+</script>
+
+</body>
+</html>
