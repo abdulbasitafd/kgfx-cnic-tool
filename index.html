@@ -1,24 +1,23 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>ID Card Print Tool</title>
-
-    <!-- Add icon here -->
   <link rel="icon" href="icon.png" type="image/png">
   <link rel="apple-touch-icon" href="icon.png">
   <meta name="theme-color" content="#007bff">
   <meta name="mobile-web-app-capable" content="yes">
-  
+
   <style>
     * {
       box-sizing: border-box;
+      margin: 0;
+      padding: 0;
     }
     body {
       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
       background: #f0f0f0;
-      margin: 0;
       padding: 20px;
     }
     .container {
@@ -69,163 +68,219 @@
       font-size: 14px;
       color: green;
     }
+    
+    /* Refined layout for A4 pages */
+    .print-container {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+    
     .a4-page {
       width: 210mm;
       height: 297mm;
-      margin: auto;
+      margin: 20px auto;
       background: white;
-      padding: 0.7cm; /*1.5cm previously*/
+      padding: 10mm;
       box-sizing: border-box;
-    }
-    .id-row {
+      border: 1px solid #ccc;
       display: flex;
-      justify-content: space-between;
-      margin-bottom: 10mm;
+      flex-direction: column;
+      align-items: center;
     }
-    .id-image {
-      width: 3.7in; /*3.4in previously*/
-      height: 2.3in;
-      border: 1px solid #aaa;
-      object-fit: cover;
-    }
+    
+    .id-row {
+  display: flex;
+  justify-content: center; /* to make the cards row in the center */
+  margin-bottom: 10mm;
+  height: 2.3in;
+  gap: 7mm; /* Added gap property to create more space between cards */
+  width: 100%;
+}
 
+.id-image {
+  width: 3.7in; 
+  height: 2.3in;
+  border: 1.3px solid #000000;
+  border-radius: 15px;
+  object-fit: cover;
+}
+
+    /* Improved print styles */
     @media print {
       @page {
         size: A4;
         margin: 0;
       }
-
+      
       html, body {
+        width: 210mm;
+        height: 297mm;
         margin: 0;
         padding: 0;
+        background-color: #fff;
+      }
+      
+      .container, .controls {
+        display: none !important;
+      }
+      
+      .print-container {
         width: 100%;
         height: 100%;
-      }
-
-      body * {
-        visibility: hidden;
-      }
-
-      .a4-page, .a4-page * {
-        visibility: visible;
-      }
-
-      .a4-page {
         position: absolute;
         top: 0;
         left: 0;
+        margin: 0;
+        padding: 0;
+        gap: 0;
+      }
+      
+      .a4-page {
         width: 210mm;
         height: 297mm;
-        padding: 0.7cm; /*1.5cm previously*/
-        box-sizing: border-box;
+        padding: 10mm;
+        margin: 0;
+        border: none;
+        page-break-after: always;
+        break-after: page;
+        box-shadow: none;
+      }
+      
+      .a4-page:last-child {
+        page-break-after: auto;
+        break-after: auto;
       }
     }
   </style>
 </head>
 <body>
-
 <div class="container">
+  <h1>ID Card Print Tool</h1>
   <div class="controls">
-    <div class="drop-area" id="dropFront">Drag & drop front image or click to upload</div>
-    <input type="file" accept="image/*" id="frontPicker" style="display:none;">
-    <div class="status" id="statusFront"></div>
-
-    <div class="drop-area" id="dropBack">Drag & drop back image or click to upload</div>
-    <input type="file" accept="image/*" id="backPicker" style="display:none;">
-    <div class="status" id="statusBack"></div>
-
-    <label for="copyCount">Select number of copies (1–4):</label>
-    <select id="copyCount">
-      <option value="1">2 Copies</option>
-      <option value="2">4 Copies</option>
-      <option value="3">6 Copies</option>
-      <option value="4">8 Copies</option>
-    </select>
-
-    <button onclick="generateLayout()">Generate Layout</button>
-    <button onclick="window.print()">Print</button>
+    <button id="toggleMode">Toggle Mode: Single</button>
+    <div id="personInputs"></div>
+    <button id="addPerson">Add Person</button>
+    <button id="generateBtn" onclick="generateLayout()">Generate Layout</button>
+    <button id="printBtn" onclick="printPages()">Print</button>
   </div>
 </div>
-
-<div class="a4-page" id="printArea"></div>
+<div class="print-container" id="printArea"></div>
 
 <script>
-  let frontImage = '';
-  let backImage = '';
+  let mode = 'single';
+  let persons = [];
 
-  const frontPicker = document.getElementById('frontPicker');
-  const backPicker = document.getElementById('backPicker');
-  const statusFront = document.getElementById('statusFront');
-  const statusBack = document.getElementById('statusBack');
-
-  document.getElementById('dropFront').addEventListener('click', () => frontPicker.click());
-  document.getElementById('dropBack').addEventListener('click', () => backPicker.click());
-
-  frontPicker.addEventListener('change', e => readFile(e.target.files[0], 'front'));
-  backPicker.addEventListener('change', e => readFile(e.target.files[0], 'back'));
-
-  function handleDrop(event, type) {
-    event.preventDefault();
-    const file = event.dataTransfer.files[0];
-    readFile(file, type);
-  }
-
-  function readFile(file, type) {
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      if (type === 'front') {
-        frontImage = e.target.result;
-        statusFront.textContent = 'Front image uploaded ✔';
-      } else {
-        backImage = e.target.result;
-        statusBack.textContent = 'Back image uploaded ✔';
-      }
-    };
-    reader.readAsDataURL(file);
-  }
-
-  ['dropFront', 'dropBack'].forEach(id => {
-    const dropArea = document.getElementById(id);
-    const type = id.includes('Front') ? 'front' : 'back';
-    dropArea.addEventListener('dragover', e => {
-      e.preventDefault();
-      dropArea.classList.add('dragover');
-    });
-    dropArea.addEventListener('dragleave', () => dropArea.classList.remove('dragover'));
-    dropArea.addEventListener('drop', e => {
-      dropArea.classList.remove('dragover');
-      handleDrop(e, type);
-    });
+  document.getElementById('toggleMode').addEventListener('click', () => {
+    mode = mode === 'single' ? 'multi' : 'single';
+    document.getElementById('toggleMode').textContent = 'Toggle Mode: ' + (mode === 'single' ? 'Single' : 'Multi');
+    document.getElementById('addPerson').style.display = mode === 'multi' ? 'block' : 'none';
+    persons = [];
+    document.getElementById('personInputs').innerHTML = '';
+    document.getElementById('printArea').innerHTML = '';
+    addPerson();
   });
+
+  document.getElementById('addPerson').addEventListener('click', () => {
+    if (persons.length < 4) addPerson();
+  });
+
+  function addPerson() {
+    const index = persons.length;
+    persons.push({ front: '', back: '', copies: 2 });
+
+    const container = document.createElement('div');
+    container.innerHTML = `
+      <div class="drop-area" onclick="document.getElementById('front${index}').click()">Upload Front (Person ${index + 1})</div>
+      <input type="file" id="front${index}" accept="image/*" style="display:none;" onchange="loadImage(event, ${index}, 'front')">
+      <div id="statusFront${index}" class="status"></div>
+      <div class="drop-area" onclick="document.getElementById('back${index}').click()">Upload Back (Person ${index + 1})</div>
+      <input type="file" id="back${index}" accept="image/*" style="display:none;" onchange="loadImage(event, ${index}, 'back')">
+      <div id="statusBack${index}" class="status"></div>
+      <label>Copies:</label>
+      <select onchange="setCopies(${index}, this.value)">
+        <option value="2">2 Copies</option>
+        <option value="4">4 Copies</option>
+        <option value="6">6 Copies</option>
+        <option value="8">8 Copies</option>
+      </select>
+      <hr>
+    `;
+    document.getElementById('personInputs').appendChild(container);
+  }
+
+  function loadImage(event, index, type) {
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      persons[index][type] = e.target.result;
+      document.getElementById(`status${type.charAt(0).toUpperCase() + type.slice(1)}${index}`).textContent = `${type.charAt(0).toUpperCase() + type.slice(1)} image uploaded ✔`;
+    };
+    reader.readAsDataURL(event.target.files[0]);
+  }
+
+  function setCopies(index, value) {
+    persons[index].copies = parseInt(value);
+  }
 
   function generateLayout() {
     const printArea = document.getElementById('printArea');
     printArea.innerHTML = '';
-    const copies = parseInt(document.getElementById('copyCount').value);
+    let totalCopies = [];
 
-    if (!frontImage || !backImage) {
-      alert('Please upload both front and back images.');
-      return;
+    if (mode === 'single') {
+      if (!persons[0]) persons.push({ front: '', back: '', copies: 2 });
+      const person = persons[0];
+      if (!person.front || !person.back) return alert('Upload both front and back images');
+      for (let i = 0; i < person.copies / 2; i++) totalCopies.push(person);
+    } else {
+      for (const person of persons) {
+        if (!person.front || !person.back) return alert('Upload all front and back images');
+        for (let i = 0; i < person.copies / 2; i++) totalCopies.push(person);
+      }
     }
 
-    for (let i = 0; i < copies; i++) {
+    let page = null;
+    let itemsPerPage = 4; // 4 rows per page
+    
+    for (let i = 0; i < totalCopies.length; i++) {
+      if (i % itemsPerPage === 0) {
+        page = document.createElement('div');
+        page.className = 'a4-page';
+        printArea.appendChild(page);
+      }
+      
       const row = document.createElement('div');
       row.className = 'id-row';
-
+      
       const front = document.createElement('img');
       front.className = 'id-image';
-      front.src = frontImage;
-
+      front.src = totalCopies[i].front;
+      
       const back = document.createElement('img');
       back.className = 'id-image';
-      back.src = backImage;
-
+      back.src = totalCopies[i].back;
+      
       row.appendChild(front);
       row.appendChild(back);
-      printArea.appendChild(row);
+      page.appendChild(row);
     }
+    
+    // Scroll to show the preview
+    printArea.scrollIntoView({ behavior: 'smooth' });
   }
-</script>
 
+  function printPages() {
+    if (document.getElementById('printArea').children.length === 0) {
+      alert('Please generate the layout first');
+      return;
+    }
+    window.print();
+  }
+
+  window.onload = () => {
+    addPerson();
+    document.getElementById('addPerson').style.display = 'none';
+  };
+</script>
 </body>
 </html>
