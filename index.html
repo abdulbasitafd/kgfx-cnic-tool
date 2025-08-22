@@ -68,6 +68,17 @@
       font-size: 14px;
       color: green;
     }
+    .compression-controls {
+      margin-top: 10px;
+      padding: 10px;
+      background-color: #f8f9fa;
+      border-radius: 5px;
+      border: 1px solid #ddd;
+    }
+    .compression-controls label {
+      display: block;
+      margin-bottom: 5px;
+    }
     
     /* Refined layout for A4 pages */
     .print-container {
@@ -90,21 +101,21 @@
     }
     
     .id-row {
-  display: flex;
-  justify-content: center; /* to make the cards row in the center */
-  margin-bottom: 10mm;
-  height: 2.3in;
-  gap: 7mm; /* Added gap property to create more space between cards */
-  width: 100%;
-}
+      display: flex;
+      justify-content: center;
+      margin-bottom: 10mm;
+      height: 2.3in;
+      gap: 7mm;
+      width: 100%;
+    }
 
-.id-image {
-  width: 3.7in; 
-  height: 2.3in;
-  border: 1.3px solid #000000;
-  border-radius: 15px;
-  object-fit: cover;
-}
+    .id-image {
+      width: 3.7in; 
+      height: 2.3in;
+      border: 1.3px solid #000000;
+      border-radius: 15px;
+      object-fit: cover;
+    }
 
     /* Improved print styles */
     @media print {
@@ -161,6 +172,19 @@
     <button id="toggleMode">Toggle Mode: Single</button>
     <div id="personInputs"></div>
     <button id="addPerson">Add Person</button>
+    
+    <div class="compression-controls">
+      <label for="imageQuality">Image Quality:</label>
+      <input type="range" id="imageQuality" min="10" max="100" value="60" step="5">
+      <span id="qualityValue">60%</span>
+      
+      <label for="maxWidth">Max Width (pixels):</label>
+      <input type="number" id="maxWidth" min="300" max="2000" value="800" step="50">
+      
+      <label for="maxHeight">Max Height (pixels):</label>
+      <input type="number" id="maxHeight" min="300" max="2000" value="500" step="50">
+    </div>
+    
     <button id="generateBtn" onclick="generateLayout()">Generate Layout</button>
     <button id="printBtn" onclick="printPages()">Print</button>
   </div>
@@ -170,12 +194,15 @@
 <script>
   let mode = 'single';
   let persons = [];
+  let optimizedImages = {};
+  let nextImageId = 0;
 
   document.getElementById('toggleMode').addEventListener('click', () => {
     mode = mode === 'single' ? 'multi' : 'single';
     document.getElementById('toggleMode').textContent = 'Toggle Mode: ' + (mode === 'single' ? 'Single' : 'Multi');
     document.getElementById('addPerson').style.display = mode === 'multi' ? 'block' : 'none';
     persons = [];
+    optimizedImages = {};
     document.getElementById('personInputs').innerHTML = '';
     document.getElementById('printArea').innerHTML = '';
     addPerson();
@@ -184,10 +211,15 @@
   document.getElementById('addPerson').addEventListener('click', () => {
     if (persons.length < 4) addPerson();
   });
+  
+  // Update quality value display
+  document.getElementById('imageQuality').addEventListener('input', function() {
+    document.getElementById('qualityValue').textContent = this.value + '%';
+  });
 
   function addPerson() {
     const index = persons.length;
-    persons.push({ front: '', back: '', copies: 2 });
+    persons.push({ front: '', back: '', copies: 2, frontImageId: null, backImageId: null });
 
     const container = document.createElement('div');
     container.innerHTML = `
@@ -213,9 +245,62 @@
     const reader = new FileReader();
     reader.onload = function(e) {
       persons[index][type] = e.target.result;
-      document.getElementById(`status${type.charAt(0).toUpperCase() + type.slice(1)}${index}`).textContent = `${type.charAt(0).toUpperCase() + type.slice(1)} image uploaded ✔`;
+      
+      // Optimize the image when it's loaded
+      optimizeImage(e.target.result, index, type);
     };
     reader.readAsDataURL(event.target.files[0]);
+  }
+
+  function optimizeImage(dataUrl, personIndex, imageType) {
+    const img = new Image();
+    img.onload = () => {
+      const quality = parseInt(document.getElementById('imageQuality').value) / 100;
+      const maxWidth = parseInt(document.getElementById('maxWidth').value);
+      const maxHeight = parseInt(document.getElementById('maxHeight').value);
+      
+      // Create canvas for resizing
+      const canvas = document.createElement('canvas');
+      let width = img.width;
+      let height = img.height;
+      
+      // Calculate new dimensions while maintaining aspect ratio
+      if (width > maxWidth) {
+        height = (height * maxWidth) / width;
+        width = maxWidth;
+      }
+      if (height > maxHeight) {
+        width = (width * maxHeight) / height;
+        height = maxHeight;
+      }
+      
+      canvas.width = width;
+      canvas.height = height;
+      
+      // Draw and compress the image
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, width, height);
+      
+      // Convert to optimized data URL
+      const optimizedDataUrl = canvas.toDataURL('image/jpeg', quality);
+      
+      // Assign a unique ID to this optimized image
+      const imageId = 'img_' + nextImageId++;
+      optimizedImages[imageId] = optimizedDataUrl;
+      
+      // Store the reference to this image ID
+      persons[personIndex][imageType + 'ImageId'] = imageId;
+      
+      // Update status to show compression info
+      const originalSize = Math.round(dataUrl.length / 1024);
+      const optimizedSize = Math.round(optimizedDataUrl.length / 1024);
+      const savings = Math.round(((originalSize - optimizedSize) / originalSize) * 100);
+      
+      document.getElementById(`status${imageType.charAt(0).toUpperCase() + imageType.slice(1)}${personIndex}`).textContent = 
+        `${imageType.charAt(0).toUpperCase() + imageType.slice(1)} image uploaded ✔ (Reduced from ${originalSize}KB to ${optimizedSize}KB, ${savings}% smaller)`;
+    };
+    
+    img.src = dataUrl;
   }
 
   function setCopies(index, value) {
@@ -228,13 +313,13 @@
     let totalCopies = [];
 
     if (mode === 'single') {
-      if (!persons[0]) persons.push({ front: '', back: '', copies: 2 });
+      if (!persons[0]) persons.push({ front: '', back: '', copies: 2, frontImageId: null, backImageId: null });
       const person = persons[0];
-      if (!person.front || !person.back) return alert('Upload both front and back images');
+      if (!person.frontImageId || !person.backImageId) return alert('Upload both front and back images');
       for (let i = 0; i < person.copies / 2; i++) totalCopies.push(person);
     } else {
       for (const person of persons) {
-        if (!person.front || !person.back) return alert('Upload all front and back images');
+        if (!person.frontImageId || !person.backImageId) return alert('Upload all front and back images');
         for (let i = 0; i < person.copies / 2; i++) totalCopies.push(person);
       }
     }
@@ -254,11 +339,11 @@
       
       const front = document.createElement('img');
       front.className = 'id-image';
-      front.src = totalCopies[i].front;
+      front.src = optimizedImages[totalCopies[i].frontImageId];
       
       const back = document.createElement('img');
       back.className = 'id-image';
-      back.src = totalCopies[i].back;
+      back.src = optimizedImages[totalCopies[i].backImageId];
       
       row.appendChild(front);
       row.appendChild(back);
