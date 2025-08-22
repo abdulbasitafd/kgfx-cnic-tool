@@ -3,8 +3,8 @@
 A professional web-based tool for creating printable ID card layouts with advanced image optimization and flexible printing options.
 
 ## 📋 Table of Contents
-- [Features](#features)
-- [Getting Started](#getting-started)
+- [Features](#-features)
+- [Getting Started](-#getting-started)
 - [How to Use](#how-to-use)
 - [Advanced Settings](#advanced-settings)
 - [Browser Compatibility](#browser-compatibility)
