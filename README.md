@@ -5,14 +5,14 @@ A professional web-based tool for creating printable ID card layouts with advanc
 ## 📋 Table of Contents
 - [Features](#-features)
 - [Getting Started](-#getting-started)
-- [How to Use](#how-to-use)
-- [Advanced Settings](#advanced-settings)
-- [Browser Compatibility](#browser-compatibility)
-- [Version History](#version-history)
-- [Technical Specifications](#technical-specifications)
-- [Troubleshooting](#troubleshooting)
-- [Contributing](#contributing)
-- [License](#license)
+- [How to Use](#-how-to-use)
+- [Advanced Settings](#-advanced-settings)
+- [Browser Compatibility](#-browser-compatibility)
+- [Version History](#-version-history)
+- [Technical Specifications](#-technical-specifications)
+- [Troubleshooting](#-troubleshooting)
+- [Contributing](#-contributing)
+- [License](#-license)
 
 ## ✨ Features
 
