@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>ID Card Print Tool</title>
+  <title>ID Card Print Tool v1.2.0</title>
   <link rel="icon" href="icon.png" type="image/png">
   <link rel="apple-touch-icon" href="icon.png">
   <meta name="theme-color" content="#007bff">
@@ -163,6 +163,29 @@
         break-after: auto;
       }
     }
+    
+    /* New styles for duplicate canvas feature */
+    .duplicate-controls {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px;
+      background-color: #f8f9fa;
+      border-radius: 5px;
+      border: 1px solid #ddd;
+    }
+    
+    .duplicate-controls input[type="checkbox"] {
+      width: 20px;
+      height: 20px;
+      cursor: pointer;
+    }
+    
+    .duplicate-controls label {
+      font-size: 16px;
+      cursor: pointer;
+      user-select: none;
+    }
   </style>
 </head>
 <body>
@@ -183,6 +206,11 @@
       
       <label for="maxHeight">Max Height (pixels):</label>
       <input type="number" id="maxHeight" min="300" max="2000" value="500" step="50">
+    </div>
+    
+    <div class="duplicate-controls">
+      <input type="checkbox" id="duplicateCanvas">
+      <label for="duplicateCanvas">Duplicate Canvas</label>
     </div>
     
     <button id="generateBtn" onclick="generateLayout()">Generate Layout</button>
@@ -297,7 +325,7 @@
       const savings = Math.round(((originalSize - optimizedSize) / originalSize) * 100);
       
       document.getElementById(`status${imageType.charAt(0).toUpperCase() + imageType.slice(1)}${personIndex}`).textContent = 
-        `${imageType.charAt(0).toUpperCase() + imageType.slice(1)} image uploaded ✔ (Reduced from ${originalSize}KB to ${optimizedSize}KB, ${savings}% smaller)`;
+        `${imageType.charAt(0).toUpperCase() + imageType.slice(1)} image uploaded ✓ (Reduced from ${originalSize}KB to ${optimizedSize}KB, ${savings}% smaller)`;
     };
     
     img.src = dataUrl;
@@ -311,6 +339,7 @@
     const printArea = document.getElementById('printArea');
     printArea.innerHTML = '';
     let totalCopies = [];
+    const isDuplicateChecked = document.getElementById('duplicateCanvas').checked;
 
     if (mode === 'single') {
       if (!persons[0]) persons.push({ front: '', back: '', copies: 2, frontImageId: null, backImageId: null });
@@ -326,12 +355,13 @@
 
     let page = null;
     let itemsPerPage = 4; // 4 rows per page
+    let allPages = []; // Store all created pages
     
     for (let i = 0; i < totalCopies.length; i++) {
       if (i % itemsPerPage === 0) {
         page = document.createElement('div');
         page.className = 'a4-page';
-        printArea.appendChild(page);
+        allPages.push(page); // Store the page
       }
       
       const row = document.createElement('div');
@@ -348,6 +378,18 @@
       row.appendChild(front);
       row.appendChild(back);
       page.appendChild(row);
+    }
+    
+    // New duplicate canvas functionality - add pages in sequence
+    if (isDuplicateChecked) {
+      allPages.forEach(originalPage => {
+        printArea.appendChild(originalPage); // Add original
+        const duplicatedPage = originalPage.cloneNode(true);
+        printArea.appendChild(duplicatedPage); // Add duplicate right after
+      });
+    } else {
+      // Add original pages to print area
+      allPages.forEach(page => printArea.appendChild(page));
     }
     
     // Scroll to show the preview
